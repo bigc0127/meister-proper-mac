@@ -1,0 +1,22 @@
+.build/
+build/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
+._*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Build artifacts (distributed via GitHub Releases, not git)
+*.dmg
+AppIcon.icns
+AppIcon.iconset/
