@@ -49,7 +49,7 @@ struct CleanView: View {
     private var tccBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "info.circle").foregroundStyle(.blue)
-            Text("Empty Trash uses Finder (works without admin). WebKit, Cookies, Saved State, and System items use a one-time admin prompt to bypass macOS TCC.")
+            Text("Click any 🔓 to escalate that item to admin (bypasses TCC blocks like ~/Library/Caches). Items with a solid 🔒 always need admin.")
                 .font(.caption).foregroundStyle(.secondary)
             Spacer()
             Button("Open Privacy Settings") {
@@ -140,7 +140,7 @@ struct CleanView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(item.label).fontWeight(.medium)
-                    if item.requiresAdmin { Image(systemName: "lock.fill").foregroundStyle(.orange).help("Requires admin") }
+                    lockButton(for: item)
                     if item.dangerous { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red).help("Dangerous") }
                 }
                 Text(item.detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -171,6 +171,25 @@ struct CleanView: View {
         .onTapGesture {
             if let i = targets.firstIndex(where: { $0.id == item.id }) { targets[i].selected.toggle() }
         }
+    }
+
+    private func lockButton(for item: CleanTarget) -> some View {
+        Button {
+            guard !item.requiresAdmin else { return }
+            if let i = targets.firstIndex(where: { $0.id == item.id }) {
+                targets[i].useAdminOverride.toggle()
+            }
+        } label: {
+            Image(systemName: item.effectiveAdmin ? "lock.fill" : "lock.open")
+                .foregroundStyle(item.effectiveAdmin ? .orange : .secondary.opacity(0.5))
+        }
+        .buttonStyle(.plain)
+        .disabled(item.requiresAdmin)
+        .help(item.requiresAdmin
+              ? "Always runs with admin (TCC-protected path)"
+              : (item.useAdminOverride
+                 ? "Admin override on — click to disable"
+                 : "Click to run this item with admin (bypasses TCC)"))
     }
 
     private func bindingFor(_ item: CleanTarget) -> Binding<Bool> {

@@ -14,6 +14,8 @@ struct CleanTarget: Identifiable, Hashable {
     let dangerous: Bool        // shows warning glyph + extra confirmation
     var size: Int64? = nil
     var selected: Bool = false
+    var useAdminOverride: Bool = false   // user clicked the lock to escalate
+    var effectiveAdmin: Bool { requiresAdmin || useAdminOverride }
 }
 
 enum CleanCategory: String, CaseIterable, Identifiable, Hashable {
@@ -56,9 +58,25 @@ enum CleanCatalog {
             requiresAdmin: false, dangerous: false))
         t.append(CleanTarget(category: .userEssentials,
             label: "Force-empty Trash (admin)",
-            detail: "Root rm — bypasses Finder + TCC. Use when Empty Trash leaves items behind.",
+            detail: "Root rm — bypasses Finder + TCC. Clears ~/.Trash and per-volume .Trashes. Strips uchg.",
             paths: [],
-            command: "/bin/rm -rf '\(h)/.Trash/'* '\(h)/.Trash/'.[!.]* 2>/dev/null; echo Trash force-emptied",
+            command: """
+            HOME_TRASH='\(h)/.Trash'
+            /bin/chflags -R nouchg "$HOME_TRASH" 2>/dev/null || true
+            REMOVED=$(/usr/bin/find "$HOME_TRASH" -mindepth 1 -maxdepth 1 2>/dev/null | /usr/bin/wc -l | /usr/bin/tr -d ' ')
+            /usr/bin/find "$HOME_TRASH" -mindepth 1 -maxdepth 1 -exec /bin/rm -rf {} + 2>/dev/null
+            UID_VAL=$(/usr/bin/id -u)
+            for v in /Volumes/*; do
+              td="$v/.Trashes/$UID_VAL"
+              if [ -d "$td" ]; then
+                /bin/chflags -R nouchg "$td" 2>/dev/null || true
+                EXTRA=$(/usr/bin/find "$td" -mindepth 1 -maxdepth 1 2>/dev/null | /usr/bin/wc -l | /usr/bin/tr -d ' ')
+                REMOVED=$((REMOVED + EXTRA))
+                /usr/bin/find "$td" -mindepth 1 -maxdepth 1 -exec /bin/rm -rf {} + 2>/dev/null
+              fi
+            done
+            echo "Trash force-emptied — removed $REMOVED top-level item(s)"
+            """,
             requiresAdmin: true, dangerous: true))
         t.append(CleanTarget(category: .userEssentials,
             label: "User logs (>14d)",

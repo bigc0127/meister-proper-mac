@@ -19,8 +19,8 @@ enum CleanService {
     /// are batched into a single osascript admin invocation.
     /// Calls `onProgress` with one log line per significant step (already on the calling actor).
     static func apply(_ targets: [CleanTarget], dryRun: Bool, onProgress: @Sendable @escaping (String) async -> Void) async {
-        let user  = targets.filter { !$0.requiresAdmin }
-        let admin = targets.filter { $0.requiresAdmin }
+        let user  = targets.filter { !$0.effectiveAdmin }
+        let admin = targets.filter { $0.effectiveAdmin }
 
         for t in user {
             await onProgress("▶ \(t.label)")
